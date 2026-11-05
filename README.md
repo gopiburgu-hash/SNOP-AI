@@ -1,2 +1,2 @@
-# SNOP-AI
-SNOP AI- Personal assistant
+# SNOOP-AI
+SNOOP AI- Personal assistant

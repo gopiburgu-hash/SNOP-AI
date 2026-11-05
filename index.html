@@ -1,1 +1,263 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#090d18">
+<title>SNOOP AI - Personal Assistant</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+ font-family:Arial,sans-serif;
+ background:#090d18;color:#f4f6ff;
+ min-height:100vh;
+}
+.app{max-width:900px;margin:auto;min-height:100vh;
+ display:flex;flex-direction:column}
+header{
+ padding:17px 20px;background:#11182a;
+ border-bottom:1px solid #28334b;
+ display:flex;align-items:center;justify-content:space-between;
+}
+.logo{font-size:23px;font-weight:bold;letter-spacing:1px}
+.logo span{color:#8b7cff}
+.status{font-size:11px;color:#9ba9c6;margin-top:5px}
+.menu{background:#202a40;color:white;border:0;
+ padding:10px 13px;border-radius:10px}
+main{flex:1;padding:25px 17px 15px}
+.welcome{text-align:center;margin:55px auto 35px}
+.welcome .star{font-size:43px}
+.welcome h1{font-size:29px;margin:14px 0}
+.welcome p{color:#a4aec4;line-height:1.6}
+.tools{
+ display:grid;grid-template-columns:repeat(2,1fr);
+ gap:12px;max-width:550px;margin:25px auto;
+}
+.tool{
+ background:#151f33;border:1px solid #2c3954;
+ padding:17px;border-radius:13px;text-align:left;
+ color:white;cursor:pointer;
+}
+.tool:active{background:#283858}
+.tool b{display:block;margin-bottom:7px}
+.tool small{color:#a4aec4}
+#chat{display:flex;flex-direction:column;gap:16px}
+.msg{padding:14px 16px;border-radius:15px;
+ max-width:88%;line-height:1.6;white-space:pre-wrap;
+ overflow-wrap:anywhere}
+.user{align-self:flex-end;background:#5144b8}
+.bot{align-self:flex-start;background:#172238;
+ border:1px solid #2a3854}
+.label{font-size:11px;color:#a9b7d2;margin-bottom:6px}
+.composer{
+ position:sticky;bottom:0;background:#090d18;
+ padding:12px 14px 18px;border-top:1px solid #25314a;
+}
+.inputbox{
+ display:flex;align-items:flex-end;gap:8px;
+ background:#151f33;border:1px solid #34415d;
+ border-radius:16px;padding:9px;
+}
+textarea{
+ flex:1;resize:none;min-height:42px;max-height:130px;
+ background:transparent;color:white;border:0;outline:0;
+ font-size:16px;padding:10px;
+}
+.action{
+ border:0;border-radius:11px;padding:11px;
+ background:#283653;color:white;font-size:17px;
+ cursor:pointer;
+}
+.send{background:#7465ef;font-weight:bold}
+.bottomnote{text-align:center;color:#75819a;
+ font-size:11px;margin-top:10px}
+button{cursor:pointer}
+footer{text-align:center;color:#74819b;
+ font-size:12px;padding:14px}
+@media(min-width:650px){
+ .tools{grid-template-columns:repeat(4,1fr)}
+ main{padding-top:35px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header>
+ <div>
+  <div class="logo">✦ SNOOP <span>AI</span></div>
+  <div class="status">Your personal assistant</div>
+ </div>
+ <button class="menu" onclick="newChat()">＋ New chat</button>
+</header>
+
+<main>
+ <section class="welcome" id="welcome">
+  <div class="star">✦</div>
+  <h1>How can I help you?</h1>
+  <p>Welcome to SNOOP AI.<br>
+  Your personal assistant for everyday tasks.</p>
+ </section>
+
+ <section class="tools" id="tools">
+  <button class="tool" onclick="suggest('Help me with my studies')">
+   <b>📚 Study Assistant</b>
+   <small>Learn and understand topics</small>
+  </button>
+  <button class="tool" onclick="suggest('Help me write some code')">
+   <b>💻 Coding</b>
+   <small>Programming assistance</small>
+  </button>
+  <button class="tool" onclick="suggest('Help me research a topic')">
+   <b>🌐 Research</b>
+   <small>Explore information</small>
+  </button>
+  <button class="tool" onclick="suggest('Help me write a document')">
+   <b>📝 Writing</b>
+   <small>Writing and ideas</small>
+  </button>
+ </section>
+
+ <section id="chat"></section>
+</main>
+
+<section class="composer">
+ <div class="inputbox">
+  <button class="action" onclick="document.getElementById('file').click()" title="Attach file">＋</button>
+  <textarea id="prompt" placeholder="Message SNOOP AI..."
+  rows="1" onkeydown="handleKey(event)"></textarea>
+  <button class="action" onclick="voice()" title="Voice input">🎙</button>
+  <button class="action send" onclick="send()">➤</button>
+ </div>
+ <input type="file" id="file" hidden onchange="attachFile(event)">
+ <div class="bottomnote">SNOOP AI • Your personal assistant</div>
+</section>
+
+<footer>Made with care • SNOOP AI</footer>
+</div>
+
+<script>
+const chat=document.getElementById("chat");
+const promptBox=document.getElementById("prompt");
+const welcome=document.getElementById("welcome");
+const tools=document.getElementById("tools");
+
+let messages=JSON.parse(localStorage.getItem("snoop_messages")||"[]");
+
+function render(){
+ chat.innerHTML="";
+ messages.forEach(m=>addMessage(m.text,m.role,false));
+ welcome.style.display=messages.length?"none":"block";
+ tools.style.display=messages.length?"none":"grid";
+}
+
+function addMessage(text,role,save=true){
+ const div=document.createElement("div");
+ div.className="msg "+(role==="user"?"user":"bot");
+ const label=document.createElement("div");
+ label.className="label";
+ label.textContent=role==="user"?"YOU":"SNOOP AI";
+ const content=document.createElement("div");
+ content.textContent=text;
+ div.appendChild(label);
+ div.appendChild(content);
+ chat.appendChild(div);
+ if(save){
+  messages.push({text,role});
+  localStorage.setItem("snoop_messages",JSON.stringify(messages));
+ }
+ window.scrollTo(0,document.body.scrollHeight);
+}
+
+function suggest(text){
+ promptBox.value=text;
+ send();
+}
+
+function send(){
+ const text=promptBox.value.trim();
+ if(!text)return;
+ addMessage(text,"user");
+ promptBox.value="";
+ welcome.style.display="none";
+ tools.style.display="none";
+ const reply=demoReply(text);
+ setTimeout(()=>addMessage(reply,"bot"),400);
+}
+
+function demoReply(text){
+ const q=text.toLowerCase();
+
+ if(q.includes("hello")||q.includes("hi"))
+  return "Hello! Welcome to SNOOP AI. I'm your personal assistant interface. Our AI engine is not connected yet, but we're building it!";
+
+ if(q.includes("study")||q.includes("jee")||q.includes("exam"))
+  return "📚 Study Assistant selected!\n\nOur study tools are being prepared. Once we connect the AI engine, I'll be able to explain concepts, solve questions and help with revision.";
+
+ if(q.includes("code")||q.includes("program"))
+  return "💻 Coding Assistant selected!\n\nThe coding interface is ready. The actual AI programming engine will be connected in the next version.";
+
+ if(q.includes("research")||q.includes("search"))
+  return "🌐 You can use the Search Web button to search this topic online. Full AI research capabilities will come after model integration.";
+
+ return "Thanks for your message!\n\nSNOOP AI's interface is working. However, the AI engine has not been connected yet. This is a demonstration response, not an AI-generated answer.\n\nWe're building the AI connection next!";
+}
+
+function newChat(){
+ messages=[];
+ localStorage.removeItem("snoop_messages");
+ render();
+}
+
+function handleKey(e){
+ if(e.key==="Enter"&&!e.shiftKey){
+  e.preventDefault();
+  send();
+ }
+}
+
+function voice(){
+ const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!Speech){
+  alert("Voice input is not supported in this browser.");
+  return;
+ }
+ const recognition=new Speech();
+ recognition.lang="en-IN";
+ recognition.onresult=e=>{
+  promptBox.value=e.results[0][0].transcript;
+ };
+ recognition.onerror=()=>alert("Voice input unavailable. Please try again.");
+ recognition.start();
+}
+
+function attachFile(e){
+ const file=e.target.files[0];
+ if(!file)return;
+ if(file.size>2*1024*1024){
+  alert("Please choose a file smaller than 2 MB.");
+  return;
+ }
+ if(file.type.startsWith("text/")||file.name.endsWith(".txt")||
+ file.name.endsWith(".md")){
+  const reader=new FileReader();
+  reader.onload=()=>{
+   promptBox.value+="\n\nFile: "+file.name+"\n"+reader.result;
+   alert("Text file loaded into the message box. Send it when ready.");
+  };
+  reader.readAsText(file);
+ }else{
+  alert("File selected: "+file.name+
+  "\nFull document and image analysis will be added after AI integration.");
+ }
+ e.target.value="";
+}
+
+render();
+</script>
+</body>
+</html>
  https://github.com/gopiburgu-hash/SNOP-AI.git
